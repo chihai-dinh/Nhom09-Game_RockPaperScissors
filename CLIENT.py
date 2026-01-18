@@ -97,7 +97,7 @@ class GameClient:
         choice_frame = tk.Frame(self.match_frame)
         choice_frame.pack(pady=10)
         
-        self.rock_btn = tk.Button(choice_frame, text="✊ KÉO", width=12, height=3,
+        self.rock_btn = tk.Button(choice_frame, text="✊ BÚA", width=12, height=3,
                                   command=lambda: self.make_choice('ROCK'), 
                                   bg="#FF6B6B", fg="white", font=("Arial", 12, "bold"))
         self.rock_btn.grid(row=0, column=0, padx=10)
@@ -107,7 +107,7 @@ class GameClient:
                                    bg="#4ECDC4", fg="white", font=("Arial", 12, "bold"))
         self.paper_btn.grid(row=0, column=1, padx=10)
         
-        self.scissors_btn = tk.Button(choice_frame, text="✌ BÚA", width=12, height=3,
+        self.scissors_btn = tk.Button(choice_frame, text="✌ KÉO", width=12, height=3,
                                       command=lambda: self.make_choice('SCISSORS'),
                                       bg="#95E1D3", fg="white", font=("Arial", 12, "bold"))
         self.scissors_btn.grid(row=0, column=2, padx=10)
@@ -316,7 +316,7 @@ class GameClient:
         self.scissors_btn.config(state='disabled')
 
     def get_emoji(self, choice):
-        emojis = {'ROCK': '✊ Kéo', 'PAPER': '✋ Bao', 'SCISSORS': '✌ Búa'}
+        emojis = {'ROCK': '✊ Búa', 'PAPER': '✋ Bao', 'SCISSORS': '✌ Kéo'}
         return emojis.get(choice, choice)
 
     def show_game_result(self, data):
