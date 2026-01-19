@@ -124,7 +124,7 @@ class AdminClient:
         self.ranking_tree.heading("Score", text="Điểm (Thắng-Thua)")
         
         self.ranking_tree.column("Rank", width=40, anchor="center")
-        self.ranking_tree.column("Player", width=100)
+        self.ranking_tree.column("Player", width=100, anchor="center")
         self.ranking_tree.column("Score", width=120, anchor="center")
         self.ranking_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
@@ -274,12 +274,26 @@ class AdminClient:
         self.add_log(f"\n🏁 Trận {data['match_id']} KẾT THÚC: {data['winner']} Thắng", "green")
 
     def show_tournament_end(self, data):
-        self.add_log("\n" + "★"*60 + f"\n         🏆 NHÀ VÔ ĐỊCH: {data['champion']}\n" + "★"*60 + "\n", "purple")
-        for item in self.ranking_tree.get_children(): self.ranking_tree.delete(item)
+        # 1. Log ra màn hình console của Admin
+        self.add_log("\n" + "★"*60, "purple")
+        self.add_log(f"         🏆 NHÀ VÔ ĐỊCH: {data['champion']}", "purple")
+        self.add_log("★"*60 + "\n", "purple")
+        
+        # 2. Cập nhật Bảng Xếp Hạng (Treeview) bên phải
+        # Xóa dữ liệu cũ
+        for item in self.ranking_tree.get_children(): 
+            self.ranking_tree.delete(item)
+            
+        # Thêm dữ liệu mới (Đủ 8 người)
         for p in data['ranking']:
+            # Tính chuỗi điểm: Ví dụ "10-5 (+5)"
             score_text = f"{p['points_for']}-{p['points_against']} ({p['goal_diff']:+d})"
+            
+            # Insert vào bảng
             self.ranking_tree.insert("", "end", values=(p['rank'], p['player_id'], score_text))
-        messagebox.showinfo("HOÀN THÀNH", f"Giải đấu kết thúc!\n🏆 Vô địch: {data['champion']}")
+            
+        # 3. Popup thông báo ngắn gọn
+        messagebox.showinfo("HOÀN THÀNH", f"Giải đấu kết thúc thành công!\n🏆 Vô địch: {data['champion']}")
 
     def on_closing(self):
         if self.sock:
