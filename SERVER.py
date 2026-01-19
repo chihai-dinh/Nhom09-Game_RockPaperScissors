@@ -57,7 +57,6 @@ class GameServerGUI:
         
         self.server = None
         self.setup_ui()
-        
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
         
     def setup_ui(self):
@@ -66,7 +65,8 @@ class GameServerGUI:
         header = tk.Frame(self.master, bg="#0078D4", height=60)
         header.pack(fill=tk.X)
         tk.Label(header, text="🖥️ SERVER DASHBOARD", 
-                font=("Segoe UI", 18, "bold"), bg="#0078D4", fg="white").pack(pady=10)
+                font=("Segoe UI", 18, "bold"), 
+                bg="#0078D4", fg="white").pack(pady=10)
         
         # --- Control Panel (Top) ---
         control_frame = tk.Frame(self.master, bg="#2D2D2D", pady=10)
@@ -92,7 +92,7 @@ class GameServerGUI:
                                   state='disabled', bg="#D13438", fg="white", font=("Segoe UI", 10, "bold"), width=10)
         self.stop_btn.pack(side=tk.LEFT, padx=5)
         
-        # --- [FIXED] Status & Connections (Right side) ---
+        # --- Status & Connections (Right side) ---
         self.status_label = tk.Label(control_frame, text="● STOPPED", 
                                      font=("Segoe UI", 10, "bold"), bg="#2D2D2D", fg="#D13438")
         self.status_label.pack(side=tk.RIGHT, padx=20)
@@ -134,7 +134,7 @@ class GameServerGUI:
                                           font=("Segoe UI", 9), bg="#2D2D2D", fg="#B0B0B0")
         self.game_status_label.pack(pady=2)
         self.round_label = tk.Label(left_panel, text="-", 
-                                   font=("Segoe UI", 9), bg="#2D2D2D", fg="#B0B0B0")
+                                    font=("Segoe UI", 9), bg="#2D2D2D", fg="#B0B0B0")
         self.round_label.pack(pady=2)
 
         # ================= CỘT PHẢI: LOGS =================
@@ -164,7 +164,7 @@ class GameServerGUI:
                                                      insertbackground="white", state='disabled')
         self.log_display.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # --- [FIXED] Log Controls (Save & Clear) ---
+        # --- Log Controls (Save & Clear) ---
         btn_log_frame = tk.Frame(sys_log_frame, bg="#1E1E1E")
         btn_log_frame.pack(fill=tk.X, padx=5, pady=2)
         
@@ -300,7 +300,7 @@ class GameServer:
         try:
             with player.lock:
                 message = json.dumps({"type": msg_type, "data": data}) + '\n'
-                player.conn.sendall(message.encode('utf-8'))
+            player.conn.sendall(message.encode('utf-8'))
         except Exception as e:
             logging.error(f"Error sending to {player.player_id}: {e}")
     
@@ -346,6 +346,7 @@ class GameServer:
         if self.lobby_locked and not is_admin:
             self.send_message(Player(conn, '', addr), 'ERROR', {'message': 'Game đã bắt đầu'})
             return None
+        
         with self.lock:
             if is_admin:
                 if self.admin:
@@ -498,9 +499,32 @@ class GameServer:
                 self.gui.add_log("Admin disconnected", "WARNING")
                 self.admin = None
             else:
+                # --- [FIXED] Handle match forfeit on disconnect ---
+                if self.game_started:
+                    for match in self.active_matches:
+                        # Kiểm tra xem người thoát có đang trong trận chưa hoàn thành không
+                        if not match.completed and (match.p1 == player or match.p2 == player):
+                            # Xác định người thắng
+                            winner = match.p2 if match.p1 == player else match.p1
+                            loser = player
+                            
+                            # Đặt điểm số tối đa cho người thắng để kết thúc trận ngay lập tức
+                            if winner == match.p1:
+                                match.p1_score = match.target_score
+                            else:
+                                match.p2_score = match.target_score
+                                
+                            self.gui.add_log(f"⚠️ Player {player.player_id} disconnected during Match {match.match_id}. Forfeit triggered.", "WARNING")
+                            
+                            # Chạy end_match trong luồng riêng để tránh deadlock vì handle_disconnect đang giữ self.lock
+                            threading.Thread(target=self.end_match, args=(match, winner, loser), daemon=True).start()
+                            break
+                # --------------------------------------------------
+
                 if player.player_id in self.players:
                     del self.players[player.player_id]
                     self.gui.add_log(f"Player '{player.player_id}' disconnected", "WARNING")
+        
         self.gui.update_player_list(self.players, self.admin)
         self.broadcast_player_list()
     
