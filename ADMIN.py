@@ -15,6 +15,7 @@ class AdminClient:
         self.sock = None
         self.is_connected = False
         self.game_started = False
+        self.player_states = {} # [NEW] Lưu trạng thái kết nối của player để dùng cho Ranking
         
         self.style = ttk.Style()
         self.style.theme_use('clam')
@@ -124,7 +125,7 @@ class AdminClient:
         self.ranking_tree.heading("Score", text="Điểm (Thắng-Thua)")
         
         self.ranking_tree.column("Rank", width=40, anchor="center")
-        self.ranking_tree.column("Player", width=100, anchor="center")
+        self.ranking_tree.column("Player", width=130, anchor="center") # Mở rộng cột Player một chút để hiện chữ AFK
         self.ranking_tree.column("Score", width=120, anchor="center")
         self.ranking_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
@@ -237,9 +238,22 @@ class AdminClient:
             threading.Thread(target=self.send_message_sync, args=('ADMIN_START', {})).start()
 
     def update_player_list(self, players):
+        # [NEW] Cập nhật logic để nhận diện AFK từ danh sách người chơi
         for item in self.player_tree.get_children(): self.player_tree.delete(item)
+        self.player_states.clear() # Làm mới trạng thái
+        
         for p in players:
-            status = "❌ Bị loại" if p['eliminated'] else "✅ Sẵn sàng"
+            # Lấy thông tin connected (nếu server V5 gửi), mặc định True để tương thích ngược
+            is_connected = p.get('connected', True)
+            self.player_states[p['id']] = is_connected # Lưu lại trạng thái để dùng ở Ranking
+            
+            if not is_connected:
+                status = "⚠️ AFK"
+            elif p['eliminated']:
+                status = "❌ Bị loại"
+            else:
+                status = "✅ Sẵn sàng"
+                
             self.player_tree.insert("", "end", values=(p['id'], status))
 
     def add_chat(self, text, color="white"):
@@ -286,11 +300,16 @@ class AdminClient:
             
         # Thêm dữ liệu mới (Đủ 8 người)
         for p in data['ranking']:
-            # Tính chuỗi điểm: Ví dụ "10-5 (+5)"
             score_text = f"{p['points_for']}-{p['points_against']} ({p['goal_diff']:+d})"
             
+            # [NEW] Kiểm tra trạng thái AFK đã lưu ở player_states
+            is_connected = self.player_states.get(p['player_id'], True)
+            display_name = p['player_id']
+            if not is_connected:
+                display_name += " (⚠️ AFK)"
+            
             # Insert vào bảng
-            self.ranking_tree.insert("", "end", values=(p['rank'], p['player_id'], score_text))
+            self.ranking_tree.insert("", "end", values=(p['rank'], display_name, score_text))
             
         # 3. Popup thông báo ngắn gọn
         messagebox.showinfo("HOÀN THÀNH", f"Giải đấu kết thúc thành công!\n🏆 Vô địch: {data['champion']}")
