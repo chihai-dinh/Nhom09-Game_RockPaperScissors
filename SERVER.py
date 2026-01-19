@@ -25,6 +25,10 @@ class Player:
         self.addr = addr
         self.is_admin = False
         self.eliminated = False
+        # --- [NEW] Thêm trạng thái kết nối và thời gian ngắt ---
+        self.is_connected = True
+        self.disconnect_time = None 
+        # -------------------------------------------------------
         self.lock = threading.Lock()
         
         # Stats
@@ -262,7 +266,14 @@ class GameServerGUI:
         def _update():
             self.players_listbox.delete(0, tk.END)
             for i, (pid, player) in enumerate(players.items(), 1):
-                status = "❌" if player.eliminated else "✅"
+                # --- [UPDATED] Hiển thị trạng thái AFK ---
+                if not player.is_connected:
+                    status = "⚠️ AFK"
+                elif player.eliminated:
+                    status = "❌"
+                else:
+                    status = "✅"
+                # -----------------------------------------
                 self.players_listbox.insert(tk.END, f"{i}. {status} {pid}")
             
             self.player_count_label.config(text=f"Players: {len(players)}/8")
@@ -297,17 +308,23 @@ class GameServer:
         self.lock = threading.Lock()
         
     def send_message(self, player: Player, msg_type: str, data: dict):
+        # --- [UPDATED] Check trạng thái kết nối ---
+        if not player.is_connected: return
+        # ------------------------------------------
         try:
             with player.lock:
                 message = json.dumps({"type": msg_type, "data": data}) + '\n'
-            player.conn.sendall(message.encode('utf-8'))
+            # Check kỹ hơn trước khi gửi
+            if player.conn:
+                player.conn.sendall(message.encode('utf-8'))
         except Exception as e:
             logging.error(f"Error sending to {player.player_id}: {e}")
     
     def broadcast(self, msg_type: str, data: dict, exclude=None):
         with self.lock:
             for player in list(self.players.values()):
-                if player != exclude and not player.eliminated:
+                # --- [UPDATED] Chỉ gửi cho người đang kết nối ---
+                if player != exclude and not player.eliminated and player.is_connected:
                     threading.Thread(target=self.send_message, args=(player, msg_type, data), daemon=True).start()
             if self.admin and self.admin != exclude:
                 threading.Thread(target=self.send_message, args=(self.admin, msg_type, data), daemon=True).start()
@@ -487,7 +504,30 @@ class GameServer:
     
     def calculate_ranking(self) -> List[dict]:
         with self.lock: players_list = list(self.players.values())
-        players_list.sort(key=lambda p: (-p.stage, -(p.points_for - p.points_against), -p.draws, -p.survival_time))
+        
+        # --- [UPDATED] Logic xếp hạng: Ưu tiên người Connected, sau đó đến người AFK ---
+        # Key sorting (Descending):
+        # 1. Connected Status (1 = Connect, 0 = AFK) -> Người connect xếp trên.
+        # 2. (Nếu AFK) Time: Thời gian càng lớn (mới disconnect) thì càng "tốt" hơn người disconnect sớm.
+        # 3. Stage, Points, Draws, Survival Time (Logic cũ)
+        def ranking_key(p: Player):
+            conn_status = 1 if p.is_connected else 0
+            # Nếu connected, time coi như max. Nếu AFK, dùng timestamp.
+            # Sắp xếp giảm dần -> Time lớn (mới) xếp trên Time nhỏ (cũ).
+            d_time = p.disconnect_time.timestamp() if p.disconnect_time else float('inf')
+            
+            return (
+                conn_status,                # Ưu tiên 1: Kết nối
+                d_time,                     # Ưu tiên 2: Thời gian disconnect (Càng muộn càng cao)
+                p.stage,                    # Ưu tiên 3: Vòng đấu
+                p.points_for - p.points_against, 
+                p.draws, 
+                p.survival_time
+            )
+            
+        players_list.sort(key=ranking_key, reverse=True)
+        # -------------------------------------------------------------------------------
+        
         ranking = []
         for rank, p in enumerate(players_list, 1):
             ranking.append({'rank': rank, 'player_id': p.player_id, 'stage': p.stage, 'points_for': p.points_for, 'points_against': p.points_against, 'goal_diff': p.points_for - p.points_against, 'draws': p.draws, 'survival_time': round(p.survival_time, 2)})
@@ -499,31 +539,26 @@ class GameServer:
                 self.gui.add_log("Admin disconnected", "WARNING")
                 self.admin = None
             else:
-                # --- [FIXED] Handle match forfeit on disconnect ---
+                # Handle match forfeit on disconnect (Logic cũ giữ nguyên)
                 if self.game_started:
                     for match in self.active_matches:
-                        # Kiểm tra xem người thoát có đang trong trận chưa hoàn thành không
                         if not match.completed and (match.p1 == player or match.p2 == player):
-                            # Xác định người thắng
                             winner = match.p2 if match.p1 == player else match.p1
                             loser = player
-                            
-                            # Đặt điểm số tối đa cho người thắng để kết thúc trận ngay lập tức
-                            if winner == match.p1:
-                                match.p1_score = match.target_score
-                            else:
-                                match.p2_score = match.target_score
-                                
+                            if winner == match.p1: match.p1_score = match.target_score
+                            else: match.p2_score = match.target_score
                             self.gui.add_log(f"⚠️ Player {player.player_id} disconnected during Match {match.match_id}. Forfeit triggered.", "WARNING")
-                            
-                            # Chạy end_match trong luồng riêng để tránh deadlock vì handle_disconnect đang giữ self.lock
                             threading.Thread(target=self.end_match, args=(match, winner, loser), daemon=True).start()
                             break
+                
+                # --- [UPDATED] KHÔNG XÓA PLAYER, CHỈ ĐÁNH DẤU AFK ---
+                if player.is_connected: # Chỉ xử lý nếu chưa xử lý
+                    player.is_connected = False
+                    player.eliminated = True # Loại khỏi giải đấu để không bắt cặp nữa
+                    player.disconnect_time = datetime.now() # Ghi lại thời gian để xếp hạng
+                    player.conn = None # Giải phóng socket connection
+                    self.gui.add_log(f"Player '{player.player_id}' marked as AFK/Disconnected", "WARNING")
                 # --------------------------------------------------
-
-                if player.player_id in self.players:
-                    del self.players[player.player_id]
-                    self.gui.add_log(f"Player '{player.player_id}' disconnected", "WARNING")
         
         self.gui.update_player_list(self.players, self.admin)
         self.broadcast_player_list()
