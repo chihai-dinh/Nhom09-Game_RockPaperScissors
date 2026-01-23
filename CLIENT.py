@@ -43,7 +43,7 @@ class GameClient:
         """Thiết lập giao diện (Đã cải tiến Layout)"""
         
         # --- 1. Frame kết nối (Luôn hiện ở trên cùng) ---
-        self.connect_frame = tk.LabelFrame(self.master, text="Cấu hình kết nối", font=self.font_bold, bg="#f0f0f0")
+        self.connect_frame = tk.LabelFrame(self.master, text="Connection configuration", font=self.font_bold, bg="#f0f0f0")
         self.connect_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
         
         # Gom nhóm input cho gọn
@@ -60,17 +60,17 @@ class GameClient:
         self.port_entry.insert(0, "8888")
         self.port_entry.pack(side=tk.LEFT, padx=5)
         
-        tk.Label(input_container, text="Tên nhân vật:", font=self.font_reg, bg="#f0f0f0").pack(side=tk.LEFT, padx=5)
+        tk.Label(input_container, text="Player ID:", font=self.font_reg, bg="#f0f0f0").pack(side=tk.LEFT, padx=5)
         self.id_entry = tk.Entry(input_container, width=15, font=self.font_reg)
         self.id_entry.pack(side=tk.LEFT, padx=5)
         
-        self.connect_btn = tk.Button(input_container, text="KẾT NỐI SERVER", 
+        self.connect_btn = tk.Button(input_container, text="CONNECT SERVER", 
                                    command=self.connect_to_server, bg="#2196F3", fg="white", 
                                    font=self.font_bold, relief="flat", padx=10)
         self.connect_btn.pack(side=tk.LEFT, padx=15)
         
         # --- 2. Frame Lobby (Hiện danh sách & Chat) ---
-        self.lobby_frame = tk.LabelFrame(self.master, text="Sảnh Chờ (Lobby)", font=self.font_bold, bg="#f0f0f0")
+        self.lobby_frame = tk.LabelFrame(self.master, text="Lobby", font=self.font_bold, bg="#f0f0f0")
         self.lobby_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
         self.lobby_frame.columnconfigure(1, weight=3) # Cột Chat chiếm 3 phần
         self.lobby_frame.columnconfigure(0, weight=1) # Cột Player chiếm 1 phần
@@ -80,11 +80,11 @@ class GameClient:
         left_panel = tk.Frame(self.lobby_frame, bg="#e0e0e0")
         left_panel.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         
-        tk.Label(left_panel, text="Danh sách Online", font=self.font_bold, bg="#e0e0e0").pack(pady=5)
+        tk.Label(left_panel, text="List Online", font=self.font_bold, bg="#e0e0e0").pack(pady=5)
         self.player_listbox = tk.Listbox(left_panel, font=self.font_reg, height=10, bg="white", bd=0)
         self.player_listbox.pack(fill=tk.BOTH, expand=True, padx=2)
         
-        self.status_label = tk.Label(left_panel, text="Trạng thái: Chưa kết nối", fg="red", bg="#e0e0e0", font=("Segoe UI", 9, "italic"))
+        self.status_label = tk.Label(left_panel, text="Status: Not connected", fg="red", bg="#e0e0e0", font=("Segoe UI", 9, "italic"))
         self.status_label.pack(pady=5)
         
         # Cột Phải: Chat
@@ -101,7 +101,7 @@ class GameClient:
         self.chat_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
         self.chat_entry.bind('<Return>', lambda e: self.send_chat())
         
-        tk.Button(chat_input_frame, text="Gửi tin nhắn", command=self.send_chat, bg="#4CAF50", fg="white", relief="flat").pack(side=tk.RIGHT)
+        tk.Button(chat_input_frame, text="Chat", command=self.send_chat, bg="#4CAF50", fg="white", relief="flat").pack(side=tk.RIGHT)
         
         # --- 3. Frame Trận đấu (Mặc định ẩn, khi hiện sẽ đè lên Lobby hoặc hiện bên dưới) ---
         # Để đẹp hơn, mình sẽ cho nó hiện thay thế Lobby hoặc nằm dưới. Ở đây mình để nằm dưới Lobby nhưng ẩn đi.
@@ -174,7 +174,7 @@ class GameClient:
             
             self.master.after(0, lambda: self.connect_btn.config(state='disabled', text="ĐÃ KẾT NỐI", bg="gray"))
             self.master.after(0, lambda: self.add_chat("✓ Đã kết nối server!", "green"))
-            self.master.after(0, lambda: self.status_label.config(text="Trạng thái: Online", fg="green"))
+            self.master.after(0, lambda: self.status_label.config(text="Status: Online", fg="green"))
             
             threading.Thread(target=self.receive_loop, daemon=True).start()
             
@@ -223,7 +223,7 @@ class GameClient:
         self.is_connected = False
         self.master.after(0, lambda: self.add_chat("✗ Mất kết nối server", "red"))
         self.master.after(0, lambda: self.connect_btn.config(state='normal', text="KẾT NỐI LẠI", bg="#2196F3"))
-        self.master.after(0, lambda: self.status_label.config(text="Trạng thái: Mất kết nối", fg="red"))
+        self.master.after(0, lambda: self.status_label.config(text="Status: Disconnected", fg="red"))
 
     def handle_message(self, message):
         msg_type = message.get('type')
@@ -237,7 +237,7 @@ class GameClient:
             if data.get('can_start'):
                 self.status_label.config(text="✓ Đủ 8 người - Chờ Admin bắt đầu", fg="green")
             else:
-                self.status_label.config(text=f"Đang chờ ({data.get('count', 0)}/8)", fg="orange")
+                self.status_label.config(text=f"Waiting ({data.get('count', 0)}/8)", fg="orange")
                 
         elif msg_type == 'PLAYER_JOINED':
             self.add_chat(f"→ {data.get('player_id')} đã tham gia ({data.get('player_count')}/8)", "blue")
