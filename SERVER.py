@@ -89,11 +89,11 @@ class GameServerGUI:
         
         # Buttons
         self.start_btn = tk.Button(control_frame, text="▶ START", command=self.start_server,
-                                   bg="#107C10", fg="white", font=("Segoe UI", 10, "bold"), width=10)
+                                   bg="#2AC62A", fg="white", font=("Segoe UI", 10, "bold"), width=10)
         self.start_btn.pack(side=tk.LEFT, padx=15)
         
         self.stop_btn = tk.Button(control_frame, text="⏹ STOP", command=self.stop_server,
-                                  state='disabled', bg="#D13438", fg="white", font=("Segoe UI", 10, "bold"), width=10)
+                                  state='disabled', bg="#CB151B", fg="white", font=("Segoe UI", 10, "bold"), width=10)
         self.stop_btn.pack(side=tk.LEFT, padx=5)
         
         # --- Status & Connections (Right side) ---
