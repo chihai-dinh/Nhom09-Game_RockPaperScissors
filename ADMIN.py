@@ -59,7 +59,7 @@ class AdminClient:
         self.port_entry.insert(0, "8888")
         self.port_entry.pack(side=tk.LEFT, padx=5)
         
-        self.connect_btn = ttk.Button(conn_frame, text="🔌 KẾT NỐI", style="Connect.TButton", command=self.connect_to_server)
+        self.connect_btn = ttk.Button(conn_frame, text="CONNECT", style="Connect.TButton", command=self.connect_to_server)
         self.connect_btn.pack(side=tk.LEFT, padx=10)
         
         self.status_label = tk.Label(top_bar, text="● Offline", bg="#34495E", fg="#E74C3C", font=("Segoe UI", 10, "bold"))
@@ -75,12 +75,12 @@ class AdminClient:
         left_col.pack_propagate(False)
         
         # Player List
-        player_frame = tk.LabelFrame(left_col, text=" Danh sách người chơi ", font=("Segoe UI", 10, "bold"), bg="#2C3E50", fg="#ECF0F1")
+        player_frame = tk.LabelFrame(left_col, text=" List of players ", font=("Segoe UI", 10, "bold"), bg="#2C3E50", fg="#ECF0F1")
         player_frame.pack(fill=tk.X, pady=(0, 10))
         
         self.player_tree = ttk.Treeview(player_frame, columns=("player", "status"), show="headings", height=8)
         self.player_tree.heading("player", text="Player ID")
-        self.player_tree.heading("status", text="Trạng thái")
+        self.player_tree.heading("status", text="Status")
         self.player_tree.column("player", width=120)
         self.player_tree.column("status", width=80, anchor="center")
         self.player_tree.pack(fill=tk.X, padx=5, pady=5)
@@ -89,7 +89,7 @@ class AdminClient:
         self.player_count_label.pack(pady=2)
 
         # Start Button
-        self.start_btn = ttk.Button(left_col, text="🚀 BẮT ĐẦU GIẢI ĐẤU", style="Start.TButton", command=self.start_game, state='disabled')
+        self.start_btn = ttk.Button(left_col, text="⚔️ BẮT ĐẦU GIẢI ĐẤU ⚔️", style="Start.TButton", command=self.start_game, state='disabled')
         self.start_btn.pack(fill=tk.X, pady=5, ipady=10)
         
         # Chat
@@ -112,17 +112,17 @@ class AdminClient:
         right_col.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
         right_col.pack_propagate(False)
         
-        self.round_label = tk.Label(right_col, text="TRẠNG THÁI: CHỜ...", font=("Segoe UI", 12, "bold"), bg="#2C3E50", fg="#3498DB", wraplength=300)
+        self.round_label = tk.Label(right_col, text="STATUS: WAITING...", font=("Segoe UI", 12, "bold"), bg="#2C3E50", fg="#3498DB", wraplength=300)
         self.round_label.pack(pady=(0, 10))
         
         # Ranking Table
-        rank_frame = tk.LabelFrame(right_col, text=" Bảng Xếp Hạng ", font=("Segoe UI", 10, "bold"), bg="#2C3E50", fg="#ECF0F1")
+        rank_frame = tk.LabelFrame(right_col, text=" Rankings ", font=("Segoe UI", 10, "bold"), bg="#2C3E50", fg="#ECF0F1")
         rank_frame.pack(fill=tk.BOTH, expand=True)
         
         self.ranking_tree = ttk.Treeview(rank_frame, columns=("Rank", "Player", "Score"), show="headings", height=20)
         self.ranking_tree.heading("Rank", text="#")
         self.ranking_tree.heading("Player", text="Player")
-        self.ranking_tree.heading("Score", text="Điểm (Thắng-Thua)")
+        self.ranking_tree.heading("Score", text="Points (Win-Loss)")
         
         self.ranking_tree.column("Rank", width=40, anchor="center")
         self.ranking_tree.column("Player", width=130, anchor="center") # Mở rộng cột Player một chút để hiện chữ AFK
@@ -133,7 +133,7 @@ class AdminClient:
         center_col = tk.Frame(main_container, bg="#2C3E50")
         center_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        log_frame = tk.LabelFrame(center_col, text=" Diễn biến trận đấu ", font=("Segoe UI", 10, "bold"), bg="#2C3E50", fg="#ECF0F1")
+        log_frame = tk.LabelFrame(center_col, text=" Match developments ", font=("Segoe UI", 10, "bold"), bg="#2C3E50", fg="#ECF0F1")
         log_frame.pack(fill=tk.BOTH, expand=True)
         
         self.match_display = scrolledtext.ScrolledText(log_frame, width=50, height=20, font=("Consolas", 10), bg="#000000", fg="#00FF00", state='disabled', borderwidth=0)
